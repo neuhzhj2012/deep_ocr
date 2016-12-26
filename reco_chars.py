@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+'''
+ usage: python reco_chars.py test_data.png test_data.txt
+'''
+import sys
+sys.path.append("../")
 import caffe
 import json
 import numpy as np
@@ -287,14 +292,16 @@ if __name__ == "__main__":
     norm_width = 64
     norm_height = 64
 
-    base_dir = "/workspace/data/chongdata_caffe_cn_sim_digits_64_64"
+    base_dir = "/home/cv/caffe/python/deep_ocr/models/chongdata_caffe_cn_sim_digits_64_64"
     model_def = os.path.join(base_dir, "deploy_lenet_train_test.prototxt")
     model_weights = os.path.join(base_dir, "lenet_iter_50000.caffemodel")
     y_tag_json_path = os.path.join(base_dir, "y_tag.json")
     caffe_cls = CaffeCls(model_def, model_weights, y_tag_json_path)
 
-    test_image = "/opt/deep_ocr/test_data.png"
-
+    #test_image = "./test_data_chi_2.jpg"
+    test_image = sys.argv[1]
+    save_name = sys.argv[2]
+    print test_image
     debug_dir = "/tmp/debug_dir"
     if debug_dir is not None:
         if os.path.isdir(debug_dir):
@@ -343,7 +350,7 @@ if __name__ == "__main__":
         filtered_vertical_peek_ranges2d.append(new_peek_range)
     vertical_peek_ranges2d = filtered_vertical_peek_ranges2d
 
-
+    idx = 0
     char_imgs = []
     crop_zeros = PreprocessCropZeros()
     resize_keep_ratio = PreprocessResizeKeepRatioFillBG(
@@ -357,16 +364,23 @@ if __name__ == "__main__":
             char_img = adaptive_threshold[y:y+h+1, x:x+w+1]
             char_img = crop_zeros.do(char_img)
             char_img = resize_keep_ratio.do(char_img)
+            filename = "/home/cv/work/deep_ocr/m_rst/" + str(idx) + ".jpg"
+            cv2.imwrite(filename, char_img)
+            idx = idx +1
             char_imgs.append(char_img)
 
     np_char_imgs = np.asarray(char_imgs)
-
     output_tag_to_max_proba = caffe_cls.predict_cv2_imgs(np_char_imgs)
 
     ocr_res = ""
     for item in output_tag_to_max_proba:
         ocr_res += item[0][0]
     print(ocr_res.encode("utf-8"))
+
+    f = open(save_name, 'w+')
+    f.write(ocr_res.encode('utf-8'))
+    f.close()
+    
 
     if debug_dir is not None:
         path_adaptive_threshold = os.path.join(debug_dir,
